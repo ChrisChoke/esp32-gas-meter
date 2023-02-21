@@ -1,0 +1,8 @@
+# config
+config.json
+
+# Workspace
+*.code-workspace
+.vscode/
+__pychache__
+mqtt_local.py
