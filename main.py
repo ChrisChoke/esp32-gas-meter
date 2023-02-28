@@ -165,6 +165,7 @@ async def mainSite(request):
           continue
         else:
           valueJson[key] = float(request.form[key])
+      valueJson['gaskWh'] = calcGas(valueJson['gasm3'])
       dumpJson(valueJson, 'values.json')
       gc.collect()
     elif "reboot" in request.form:
