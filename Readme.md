@@ -12,6 +12,11 @@ in germany our gas meter has possibility for inserting a reed-contact to count p
 
 you can set up some values via webserver. So you must get ESPs Ip-Address via your dhcp server or router.
 
+**Notice:** The position of the reed contact is a bit sensitive. A bit too more right or left could end in double count or
+ not every pulse will count. Means, the signal will be very unstable. So please leave a bit more time to check the right position.
+
+ The reed contact pin is pull-up connected with external resistor.
+
 ### main.py:
 
 Includes the Main code.

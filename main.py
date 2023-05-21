@@ -28,17 +28,29 @@ def calcGas(gasm3: float) -> float:
   return result
 
 interDetect = False
-def handlerInterrupt(pin: int):
+def handlerInterrupt(timer):
   """
   interrupt handler of our input gpio
   """
   global interDetect, gasm3, gaskWh
-  print('pin change', pin)
+  # emp interrupts are really short, so check pin.value() again to filter those interrupts
+  print('pin value: ', reedPin.value())
+  if reedPin.value() == 1:
+     print("possible bounce or emp interrupt filtered")
+     return
+  print('send data')
   gasm3 = valueJson['gasm3'] + valueJson['impulsm3']
   gaskWh = calcGas(gasm3)
   valueJson['gasm3'], valueJson['gaskWh'] = gasm3, gaskWh
   interDetect = True
   dumpJson(valueJson,'values.json')
+
+# debouncing
+def input_debounce(pin):
+    #print('pin: ', pin, 'value: ', pin.value())
+    if pin.value() == 0:
+      # set Timer to prevent repeating interrupt (period in Millisekunden)
+      machine.Timer(0).init(mode=machine.Timer.ONE_SHOT, period=500, callback=handlerInterrupt)
 
 async def pulse():
   """
@@ -70,14 +82,14 @@ async def up(client):
       uasyncio.create_task(pulse())
 
 async def main(client):
-  global interDetect
+  global interDetect, reedPin
   await client.connect()
   if ntp != None:
     ntptime.settime()
   print(f'Connected to {config["server"]} MQTT broker')
   reedPin = machine.Pin(config["machinePin"], machine.Pin.IN, None)
   # interupt event on input, call callbackInput function
-  reedPin.irq(trigger=machine.Pin.IRQ_FALLING, handler=handlerInterrupt)
+  reedPin.irq(trigger=machine.Pin.IRQ_FALLING, handler=input_debounce)
   while True:
     if interDetect:
       await client.publish(f'{topicPub}gasm3', str(gasm3))
@@ -167,6 +179,8 @@ async def mainSite(request):
           valueJson[key] = float(request.form[key])
       valueJson['gaskWh'] = calcGas(valueJson['gasm3'])
       dumpJson(valueJson, 'values.json')
+      await client.publish(f'{topicPub}gasm3', str(valueJson['gasm3']))
+      await client.publish(f'{topicPub}gaskWh', str(valueJson['gaskWh']))
       gc.collect()
     elif "reboot" in request.form:
       machine.reset()
