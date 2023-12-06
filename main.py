@@ -37,17 +37,18 @@ def handlerInterrupt(timer):
   print('pin value: ', reedPin.value())
   if reedPin.value() == 1:
      print("possible bounce or emp interrupt filtered")
+     reedPin.irq(handler=input_debounce)
      return
-  print('send data')
   gasm3 = valueJson['gasm3'] + valueJson['impulsm3']
   gaskWh = calcGas(gasm3)
   valueJson['gasm3'], valueJson['gaskWh'] = gasm3, gaskWh
-  interDetect = True
   dumpJson(valueJson,'values.json')
+  interDetect = True
 
 # debouncing
 def input_debounce(pin):
     #print('pin: ', pin, 'value: ', pin.value())
+    pin.irq(handler=None)
     if pin.value() == 0:
       # set Timer to prevent repeating interrupt (period in Millisekunden)
       machine.Timer(0).init(mode=machine.Timer.ONE_SHOT, period=500, callback=handlerInterrupt)
@@ -96,6 +97,7 @@ async def main(client):
       await client.publish(f'{topicPub}gaskWh', str(gaskWh))
       uasyncio.create_task(pulse())
       interDetect = False
+      reedPin.irq(handler=input_debounce)
     await uasyncio.sleep(1)
 
 def start():
