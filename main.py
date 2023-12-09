@@ -3,7 +3,7 @@ import ntptime
 import ujson
 from sys import platform
 from mqtt_as import MQTTClient, config
-import uasyncio
+import uasyncio as asyncio
 from microdot_asyncio import Microdot, Response
 from microdot_utemplate import render_template
 import machine
@@ -27,37 +27,12 @@ def calcGas(gasm3: float) -> float:
   result = gasm3 * valueJson['brennzahl'] * valueJson['zustandszahl']
   return result
 
-interDetect = False
-def handlerInterrupt(timer):
-  """
-  interrupt handler of our input gpio
-  """
-  global interDetect, gasm3, gaskWh
-  # emp interrupts are really short, so check pin.value() again to filter those interrupts
-  print('pin value: ', reedPin.value())
-  if reedPin.value() == 1:
-     print("possible bounce or emp interrupt filtered")
-     return
-  print('send data')
-  gasm3 = valueJson['gasm3'] + valueJson['impulsm3']
-  gaskWh = calcGas(gasm3)
-  valueJson['gasm3'], valueJson['gaskWh'] = gasm3, gaskWh
-  interDetect = True
-  dumpJson(valueJson,'values.json')
-
-# debouncing
-def input_debounce(pin):
-    #print('pin: ', pin, 'value: ', pin.value())
-    if pin.value() == 0:
-      # set Timer to prevent repeating interrupt (period in Millisekunden)
-      machine.Timer(0).init(mode=machine.Timer.ONE_SHOT, period=500, callback=handlerInterrupt)
-
 async def pulse():
   """
   let pulse the blue led
   """
   blue_led(False)
-  await uasyncio.sleep(1)
+  await asyncio.sleep(1)
   blue_led(True)
 
 async def down(client):
@@ -79,27 +54,47 @@ async def up(client):
       client.up.clear()
       wifi_led(True)
       await client.publish(f'{topicPub}system/state', 'Online')
-      uasyncio.create_task(pulse())
+      asyncio.create_task(pulse())
+
+async def pin_event(client, event):
+  global gasm3, gaskWh, pinReset
+  while True:
+     await event.wait()
+     event.clear()
+     pinReset = False
+
+     gasm3 = valueJson['gasm3'] + valueJson['impulsm3']
+     gaskWh = calcGas(gasm3)
+     valueJson['gasm3'], valueJson['gaskWh'] = gasm3, gaskWh
+     dumpJson(valueJson,'values.json')
+
+     await client.publish(f'{topicPub}gasm3', str(gasm3))
+     await client.publish(f'{topicPub}gaskWh', str(gaskWh))
+     print(f'pin: {reedPin.value()}, gaskWh: {gaskWh}, gasm3: {gasm3}')
+     asyncio.create_task(pulse())
 
 async def main(client):
-  global interDetect, reedPin
+  global reedPin, pinReset
   await client.connect()
   if ntp != None:
     ntptime.settime()
   print(f'Connected to {config["server"]} MQTT broker')
   reedPin = machine.Pin(config["machinePin"], machine.Pin.IN, None)
-  # interupt event on input, call callbackInput function
-  reedPin.irq(trigger=machine.Pin.IRQ_FALLING, handler=input_debounce)
+  pinEvent = asyncio.Event()
+  asyncio.create_task(pin_event(client, pinEvent))
+  
+  await client.publish(f'{topicPub}gasm3', str(gasm3))
+  await client.publish(f'{topicPub}gaskWh', str(gaskWh))
+  pinReset = True
   while True:
-    if interDetect:
-      await client.publish(f'{topicPub}gasm3', str(gasm3))
-      await client.publish(f'{topicPub}gaskWh', str(gaskWh))
-      uasyncio.create_task(pulse())
-      interDetect = False
-    await uasyncio.sleep(1)
+    if reedPin.value() == 0 and pinReset:
+       pinEvent.set()
+    elif reedPin.value() == 1:
+       pinReset = True
+    await asyncio.sleep(0.5)
 
 def start():
-  loop= uasyncio.get_event_loop()
+  loop= asyncio.get_event_loop()
   for task in (up, down, main):
         loop.create_task(task(client))
   loop.create_task(app.start_server(port=80))
