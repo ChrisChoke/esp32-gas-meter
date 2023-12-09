@@ -151,10 +151,11 @@ class Response(BaseResponse):
             await stream.awrite(b'\r\n')
 
             # body
-            async for body in self.body_iter():
-                if isinstance(body, str):  # pragma: no cover
-                    body = body.encode()
-                await stream.awrite(body)
+            if not self.is_head:
+                async for body in self.body_iter():
+                    if isinstance(body, str):  # pragma: no cover
+                        body = body.encode()
+                    await stream.awrite(body)
         except OSError as exc:  # pragma: no cover
             if exc.errno in MUTED_SOCKET_ERRORS or \
                     exc.args[0] == 'Connection lost':
@@ -240,7 +241,7 @@ class Microdot(BaseMicrodot):
             app = Microdot()
 
             @app.route('/')
-            async def index():
+            async def index(request):
                 return 'Hello, world!'
 
             async def main():
@@ -279,6 +280,11 @@ class Microdot(BaseMicrodot):
 
         while True:
             try:
+                if hasattr(self.server, 'serve_forever'):  # pragma: no cover
+                    try:
+                        await self.server.serve_forever()
+                    except asyncio.CancelledError:
+                        pass
                 await self.server.wait_closed()
                 break
             except AttributeError:  # pragma: no cover
@@ -312,7 +318,7 @@ class Microdot(BaseMicrodot):
             app = Microdot()
 
             @app.route('/')
-            async def index():
+            async def index(request):
                 return 'Hello, world!'
 
             app.run(debug=True)
@@ -347,6 +353,7 @@ class Microdot(BaseMicrodot):
                 status_code=res.status_code))
 
     async def dispatch_request(self, req):
+        after_request_handled = False
         if req:
             if req.content_length > req.max_content_length:
                 if 413 in self.error_handlers:
@@ -383,6 +390,9 @@ class Microdot(BaseMicrodot):
                         for handler in req.after_request_handlers:
                             res = await self._invoke_handler(
                                 handler, req, res) or res
+                        after_request_handled = True
+                    elif isinstance(f, dict):
+                        res = Response(headers=f)
                     elif f in self.error_handlers:
                         res = await self._invoke_handler(
                             self.error_handlers[f], req)
@@ -425,6 +435,11 @@ class Microdot(BaseMicrodot):
             res = Response(*res)
         elif not isinstance(res, Response):
             res = Response(res)
+        if not after_request_handled:
+            for handler in self.after_error_request_handlers:
+                res = await self._invoke_handler(
+                    handler, req, res) or res
+        res.is_head = (req and req.method == 'HEAD')
         return res
 
     async def _invoke_handler(self, f_or_coro, *args, **kwargs):

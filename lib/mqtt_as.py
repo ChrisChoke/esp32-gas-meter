@@ -1,5 +1,5 @@
 # mqtt_as.py Asynchronous version of umqtt.robust
-# (C) Copyright Peter Hinch 2017-2022.
+# (C) Copyright Peter Hinch 2017-2023.
 # Released under the MIT licence.
 
 # Pyboard D support added also RP2/default
@@ -25,7 +25,7 @@ import network
 gc.collect()
 from sys import platform
 
-VERSION = (0, 7, 0)
+VERSION = (0, 7, 1)
 
 # Default short delay for good SynCom throughput (avoid sleep(0) with SynCom).
 _DEFAULT_MS = const(20)
@@ -100,6 +100,7 @@ config = {
     "ssid": None,
     "wifi_pw": None,
     "queue_len": 0,
+    "gateway" : False,
 }
 
 
@@ -167,6 +168,14 @@ class MQTT_base:
         self._sock = None
         self._sta_if = network.WLAN(network.STA_IF)
         self._sta_if.active(True)
+        if config["gateway"]:  # Called from gateway (hence ESP32).
+            import aioespnow  # Set up ESPNOW
+            while not (sta := self._sta_if).active():
+                time.sleep(0.1)
+            sta.config(pm = sta.PM_NONE)  # No power management
+            sta.active(True)
+            self._espnow = aioespnow.AIOESPNow()  # Returns AIOESPNow enhanced with async support
+            self._espnow.active(True)
 
         self.newpid = pid_gen()
         self.rcv_pids = set()  # PUBACK and SUBACK pids awaiting ACK response
@@ -551,7 +560,6 @@ class MQTTClient(MQTT_base):
         self._tasks = []
         if ESP8266:
             import esp
-
             esp.sleep_type(0)  # Improve connection integrity at cost of power consumption.
 
     async def wifi_connect(self, quick=False):
