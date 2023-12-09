@@ -1,7 +1,8 @@
 # ESP32-Gas-Meter
 
-actual its in development status. it should work, but maybe some error handling is missing or maybe the interrupt pin
-has to be debounce. i will buy a reed contact and test a bit around.
+I dropped interrupt (pin.irq) for detecting state of reed contact, because i had much trouble with emc. So i go to reading the pin.value() every 500ms. i hope that is more robust.
+i let the interrupt version in another branch. so check out if you are interested.
+
 codebase is a bit unordered and unstructured. feel free to clean it up before i do someday :-)
 its my first async codebase, so i am in learning process :-)
 
