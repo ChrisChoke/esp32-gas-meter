@@ -47,6 +47,7 @@ possible configs:
     "ntp": "IP_ADDRESS or DNS",     // default None
     "topicPub" : "esp32/",           // default "esp32gas/"
     "webreplpw": "REPLPASSWORD"
+    "homeassistant": true        // default false
 }
 ```
 
