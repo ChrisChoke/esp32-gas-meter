@@ -1,16 +1,22 @@
+# import microdot early to alloc needed memory
+from microdot_asyncio import Microdot, Response
+from microdot_utemplate import render_template
+from mqtt_as import MQTTClient, config
+from homeassistant import home_assistant
+
+import gc
+gc.collect()
+
 import utime
 import ntptime
 import ujson
 from sys import platform
-from mqtt_as import MQTTClient, config
 import uasyncio as asyncio
-from microdot_asyncio import Microdot, Response
-from microdot_utemplate import render_template
 import machine
 import micropython
 import esp
 esp.osdebug(None)
-import gc
+gc.collect()
 
 def dumpJson(jsonData: dict, fileName: str):
   """
@@ -57,7 +63,7 @@ async def up(client):
       asyncio.create_task(pulse())
 
 async def pin_event(client, event):
-  global gasm3, gaskWh, pinReset
+  global pinReset
   while True:
      await event.wait()
      event.clear()
@@ -83,6 +89,8 @@ async def main(client):
   pinEvent = asyncio.Event()
   asyncio.create_task(pin_event(client, pinEvent))
   
+  if homeAssistant:
+     asyncio.create_task(home_assistant(client, topicPub))
   await client.publish(f'{topicPub}gasm3', str(gasm3))
   await client.publish(f'{topicPub}gaskWh', str(gaskWh))
   pinReset = True
@@ -91,7 +99,7 @@ async def main(client):
        pinEvent.set()
     elif reedPin.value() == 1:
        pinReset = True
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(0.3)
 
 def start():
   loop= asyncio.get_event_loop()
@@ -111,6 +119,7 @@ config.update(configJson)
 
 # many vars i currently dont need to define with default. many defaults come from mqtt_as
 topicPub = config["topicPub"] if "topicPub" in config else 'esp32gas/'
+homeAssistant = config["homeassistant"] if "homeassistant" in config else False
 ntp = config["ntp"] if "ntp" in config else None
 
 # set up webrepl if password in config.json
