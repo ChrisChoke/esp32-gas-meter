@@ -62,6 +62,20 @@ async def up(client):
       await client.publish(f'{topicPub}system/state', 'Online')
       asyncio.create_task(pulse())
 
+async def count_up(m3: float, impulsm3: float) -> float:
+   # function to try to prevent floating point error
+   # convert as string to integer and count up
+   imp_str = str(impulsm3)
+   _decimal = imp_str[imp_str.index(".")+1:]
+   decimal = len(_decimal)
+
+   multiplier = 10**decimal
+   _m3_str = '{:.2f}'.format(m3)
+   m3_str = _m3_str.replace(".", "")
+   
+   result = int(int(m3_str) + (impulsm3 * multiplier))
+   return result / multiplier
+
 async def pin_event(client, event):
   global pinReset
   while True:
@@ -69,7 +83,7 @@ async def pin_event(client, event):
      event.clear()
      pinReset = False
 
-     gasm3 = valueJson['gasm3'] + valueJson['impulsm3']
+     gasm3 = await count_up(valueJson['gasm3'], valueJson['impulsm3'])
      gaskWh = calcGas(gasm3)
      valueJson['gasm3'], valueJson['gaskWh'] = gasm3, gaskWh
      dumpJson(valueJson,'values.json')
