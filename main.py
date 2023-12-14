@@ -64,13 +64,14 @@ async def up(client):
 
 async def count_up(m3: float, impulsm3: float) -> float:
    # function to try to prevent floating point error
-   # convert as string to integer and count up
+   # convert as string to integer without any calculation and count up
    imp_str = str(impulsm3)
    _decimal = imp_str[imp_str.index(".")+1:]
    decimal = len(_decimal)
 
    multiplier = 10**decimal
-   _m3_str = '{:.2f}'.format(m3)
+   str_formatter = f'{{:.{decimal}f}}'
+   _m3_str = str_formatter.format(m3)
    m3_str = _m3_str.replace(".", "")
    
    result = int(int(m3_str) + (impulsm3 * multiplier))
