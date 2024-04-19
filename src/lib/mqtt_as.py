@@ -25,7 +25,7 @@ import network
 gc.collect()
 from sys import platform
 
-VERSION = (0, 7, 1)
+VERSION = (0, 7, 2)
 
 # Default short delay for good SynCom throughput (avoid sleep(0) with SynCom).
 _DEFAULT_MS = const(20)
@@ -100,7 +100,7 @@ config = {
     "ssid": None,
     "wifi_pw": None,
     "queue_len": 0,
-    "gateway" : False,
+    "gateway": False,
 }
 
 
@@ -170,9 +170,10 @@ class MQTT_base:
         self._sta_if.active(True)
         if config["gateway"]:  # Called from gateway (hence ESP32).
             import aioespnow  # Set up ESPNOW
+
             while not (sta := self._sta_if).active():
                 time.sleep(0.1)
-            sta.config(pm = sta.PM_NONE)  # No power management
+            sta.config(pm=sta.PM_NONE)  # No power management
             sta.active(True)
             self._espnow = aioespnow.AIOESPNow()  # Returns AIOESPNow enhanced with async support
             self._espnow.active(True)
@@ -313,8 +314,11 @@ class MQTT_base:
         # read causes ECONNABORTED if broker is out; triggers a reconnect.
         resp = await self._as_read(4)
         self.dprint("Connected to broker.")  # Got CONNACK
-        if resp[3] != 0 or resp[0] != 0x20 or resp[1] != 0x02:  # Bad CONNACK e.g. authentication fail.
-            raise OSError(-1, f"Connect fail: 0x{(resp[0] << 8) + resp[1]:04x} {resp[3]} (README 7)")
+        if resp[3] != 0 or resp[0] != 0x20 or resp[1] != 0x02:
+            # Bad CONNACK e.g. authentication fail.
+            raise OSError(
+                -1, f"Connect fail: 0x{(resp[0] << 8) + resp[1]:04x} {resp[3]} (README 7)"
+            )
 
     async def _ping(self):
         async with self.lock:
@@ -560,6 +564,7 @@ class MQTTClient(MQTT_base):
         self._tasks = []
         if ESP8266:
             import esp
+
             esp.sleep_type(0)  # Improve connection integrity at cost of power consumption.
 
     async def wifi_connect(self, quick=False):
@@ -599,8 +604,10 @@ class MQTTClient(MQTT_base):
                 if s.isconnected():
                     break
                 if ESP32:
-                    if s.status() != network.STAT_CONNECTING:  # 1001
-                        break
+                    # Status values >= STAT_IDLE can occur during connect:
+                    # STAT_IDLE 1000, STAT_CONNECTING 1001, STAT_GOT_IP 1010
+                    if s.status() < network.STAT_IDLE:  # Error statuses
+                        break  # are in range 200..204
                 elif PYBOARD:  # No symbolic constants in network
                     if not 1 <= s.status() <= 2:
                         break
