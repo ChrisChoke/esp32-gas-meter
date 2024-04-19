@@ -8,6 +8,9 @@ its my first async codebase, so i am in learning process :-)
 
 ## Instructions
 
+
+**Micropython version >= 1.21 needed.**
+
 This project is for esp32 platform. It read the reed-contact of your gas meter from your supplier and publish it via mqtt.
 in germany our gas meter has possibility for inserting a reed-contact to count pulses to increase gas m³.
 
