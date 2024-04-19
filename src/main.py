@@ -7,11 +7,10 @@ from homeassistant import home_assistant
 import gc
 gc.collect()
 
-import utime
 import ntptime
-import ujson
+import json
 from sys import platform
-import uasyncio as asyncio
+import asyncio
 import machine
 import micropython
 import esp
@@ -23,7 +22,7 @@ def dumpJson(jsonData: dict, fileName: str):
   simply dump dictionary to json file
   """
   wFile = open(fileName, 'w')
-  wFile.write(ujson.dumps(jsonData))
+  wFile.write(json.dumps(jsonData))
   wFile.close()
 
 def calcGas(gasm3: float) -> float:
@@ -129,7 +128,7 @@ gc.collect()
 
 # merge mqtt_as config with our config.json for defaulting some settings
 configRead = open('config.json').read()
-configJson = ujson.loads(configRead)
+configJson = json.loads(configRead)
 config.update(configJson)
 
 # many vars i currently dont need to define with default. many defaults come from mqtt_as
@@ -172,7 +171,7 @@ except OSError:
   dumpJson(defaultValues, 'values.json')
   valuesRead = open('values.json').read()
 
-valueJson = ujson.loads(valuesRead)
+valueJson = json.loads(valuesRead)
 gasm3, gaskWh = valueJson['gasm3'], valueJson['gaskWh']
 
 ntptime.host = ntp
