@@ -1,6 +1,6 @@
 # import microdot early to alloc needed memory
-from microdot_asyncio import Microdot, Response
-from microdot_utemplate import render_template
+from microdot import Microdot, Response
+from microdot.utemplate import Template
 from mqtt_as import MQTTClient, config
 from homeassistant import home_assistant
 
@@ -203,7 +203,7 @@ async def mainSite(request):
       gc.collect()
     elif "reboot" in request.form:
       machine.reset()
-  return render_template('index.tpl', valueJson=valueJson)
+  return await Template('index.tpl').render_async(valueJson=valueJson)
 
 try:
   start()
