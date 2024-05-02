@@ -1,4 +1,4 @@
-import ujson
+import json
 import gc
 
 async def home_assistant(client, baseTopic):
@@ -32,8 +32,8 @@ async def home_assistant(client, baseTopic):
    }
    haTopicm3= 'homeassistant/sensor/esp32GasMeter/gas/config'
    haTopickWh= 'homeassistant/sensor/esp32GasMeter/energy/config'
-   json_payload_m3 = ujson.dumps(payload_m3).encode('utf8') # need encoding for superscript 3
-   json_payload_kwH = ujson.dumps(payload_kWh)
+   json_payload_m3 = json.dumps(payload_m3).encode('utf8') # need encoding for superscript 3
+   json_payload_kwH = json.dumps(payload_kWh)
    await client.publish(f'{haTopicm3}', json_payload_m3, retain=True)
    await client.publish(f'{haTopickWh}', json_payload_kwH, retain=True)
    gc.collect()
