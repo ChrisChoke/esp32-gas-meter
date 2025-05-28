@@ -60,7 +60,7 @@
           <th>Actual Values</th>
           <th>Change Values</th>
         </tr>
-        <form method="post" action="">
+        <form method="post" action="/update">
           {% for key, value in valueJson.items() %}
             {% if key == 'gaskWh' %}
             <tr>

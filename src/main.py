@@ -1,5 +1,5 @@
 # import microdot early to alloc needed memory
-from microdot import Microdot, Response
+from microdot import Microdot, Response, redirect
 from microdot.utemplate import Template
 from mqtt_as import MQTTClient
 from config import Config
@@ -138,24 +138,26 @@ client = MQTTClient(config)
 app = Microdot()
 Response.default_content_type = 'text/html'
 
-@app.route('/', methods=['GET', 'POST'])
+@app.get('/')
 async def mainSite(request):
-  if request.method == "POST":
-    print(request)
-    if "change" in request.form:
-      for key in request.form:
-        if key == 'change':
-          continue
-        else:
-          valueJson[key] = float(request.form[key])
-      gasmeter.calc_power()
-      gasmeter.write_values()
-      await client.publish(f'{config["topicPub"]}gasm3', str(valueJson['gasm3']))
-      await client.publish(f'{config["topicPub"]}gaskWh', str(valueJson['gaskWh']))
-      gc.collect()
-    elif "reboot" in request.form:
-      machine.reset()
   return await Template('index.tpl').render_async(valueJson=valueJson)
+
+@app.post("/update")
+async def update(request):
+  if "change" in request.form:
+    for key in request.form:
+      if key == 'change':
+        continue
+      else:
+        valueJson[key] = float(request.form[key])
+    gasmeter.calc_power()
+    gasmeter.write_values()
+    await client.publish(f'{config["topicPub"]}gasm3', str(valueJson['gasm3']))
+    await client.publish(f'{config["topicPub"]}gaskWh', str(valueJson['gaskWh']))
+    gc.collect()
+  elif "reboot" in request.form:
+    machine.reset()
+  return redirect("/")
 
 try:
   start()
