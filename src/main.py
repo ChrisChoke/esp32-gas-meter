@@ -150,7 +150,7 @@ async def update(request):
         continue
       else:
         valueJson[key] = float(request.form[key])
-    gasmeter.calc_power()
+    valueJson['gaskWh'] = gasmeter.calc_power()
     gasmeter.write_values()
     await client.publish(f'{config["topicPub"]}gasm3', str(valueJson['gasm3']))
     await client.publish(f'{config["topicPub"]}gaskWh', str(valueJson['gaskWh']))

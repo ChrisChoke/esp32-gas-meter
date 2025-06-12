@@ -19,8 +19,8 @@ class Gasmeter():
         FileHandler(self.filename).write(json.dumps(self.values))
 
     def do_counting(self):
-        self._count_up()
-        self.calc_power()
+        self.values["gasm3"] = self._count_up()
+        self.values["gaskWh"] = self.calc_power()
         self.write_values()
 
     def _count_up(self) -> float:
@@ -38,10 +38,10 @@ class Gasmeter():
         m3_str = _m3_str.replace(".", "")
 
         result = int(int(m3_str) + (self.values["impulsm3"] * multiplier))
-        self.values["gasm3"] =  result / multiplier
+        return  result / multiplier
 
     def calc_power(self) -> float:
         """
         calculation m3 to kWh
         """
-        self.values["gaskWh"] = self.values["gasm3"] * self.values['brennzahl'] * self.values['zustandszahl']
+        return self.values["gasm3"] * self.values['brennzahl'] * self.values['zustandszahl']
