@@ -4,6 +4,8 @@ config.json
 # Workspace
 *.code-workspace
 .vscode/
+venv
+.venv
 __pychache__
 mqtt_local.py
 *.bin
