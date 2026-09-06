@@ -58,8 +58,8 @@ async def pin_event(client, event):
      gasmeter.do_counting()
      gasm3, gaskWh = gasmeter.values["gasm3"], gasmeter.values["gaskWh"]
 
-     await client.publish(f'{config["topicPub"]}gasm3', str(gasm3))
-     await client.publish(f'{config["topicPub"]}gaskWh', str(gaskWh))
+     await client.publish(f'{config["topicPub"]}gasm3', str(gasm3), retain=True)
+     await client.publish(f'{config["topicPub"]}gaskWh', str(gaskWh), retain=True)
      print(f'pin: {reedPin.value()}, gaskWh: {gaskWh}, gasm3: {gasm3}')
      asyncio.create_task(pulse())
 
@@ -76,8 +76,8 @@ async def main(client):
   
   if config["homeassistant"]:
      asyncio.create_task(home_assistant(client, config["topicPub"]))
-  await client.publish(f'{config["topicPub"]}gasm3', str(gasmeter.values["gasm3"]))
-  await client.publish(f'{config["topicPub"]}gaskWh', str(gasmeter.values["gaskWh"]))
+  await client.publish(f'{config["topicPub"]}gasm3', str(gasmeter.values["gasm3"]), retain=True)
+  await client.publish(f'{config["topicPub"]}gaskWh', str(gasmeter.values["gaskWh"]), retain=True)
   pinReset = True
   while True:
     if reedPin.value() == 0 and pinReset:
@@ -151,8 +151,8 @@ async def update(request):
       valueJson[key] = float(request.form[key])
     valueJson['gaskWh'] = gasmeter.calc_power()
     gasmeter.write_values()
-    await client.publish(f'{config["topicPub"]}gasm3', str(valueJson['gasm3']))
-    await client.publish(f'{config["topicPub"]}gaskWh', str(valueJson['gaskWh']))
+    await client.publish(f'{config["topicPub"]}gasm3', str(valueJson['gasm3']), retain=True)
+    await client.publish(f'{config["topicPub"]}gaskWh', str(valueJson['gaskWh']), retain=True)
     gc.collect()
   elif "reboot" in request.form:
     machine.reset()
