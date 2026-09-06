@@ -15,6 +15,14 @@ class Gasmeter():
             FileHandler(self.filename).write(json.dumps(defaults))
         return json.loads(FileHandler(self.filename).read())
 
+    @property
+    def gas_volume(self):
+        return self.values['gasm3']
+
+    @property
+    def gas_energy(self):
+        return self.values['gaskWh']
+
     def write_values(self) -> None:
         FileHandler(self.filename).write(json.dumps(self.values))
 

@@ -56,11 +56,10 @@ async def pin_event(client, event):
      pinReset = False
 
      gasmeter.do_counting()
-     gasm3, gaskWh = gasmeter.values["gasm3"], gasmeter.values["gaskWh"]
 
-     await client.publish(f'{config["topicPub"]}gasm3', str(gasm3), retain=True)
-     await client.publish(f'{config["topicPub"]}gaskWh', str(gaskWh), retain=True)
-     print(f'pin: {reedPin.value()}, gaskWh: {gaskWh}, gasm3: {gasm3}')
+     await client.publish(f'{config["topicPub"]}gasm3', str(gasmeter.gas_volume), retain=True)
+     await client.publish(f'{config["topicPub"]}gaskWh', str(gasmeter.gas_energy), retain=True)
+     print(f'pin: {reedPin.value()}, gaskWh: {gasmeter.gas_energy}, gasm3: {gasmeter.gas_volume}')
      asyncio.create_task(pulse())
 
 async def main(client):
@@ -76,8 +75,8 @@ async def main(client):
   
   if config["homeassistant"]:
      asyncio.create_task(home_assistant(client, config["topicPub"]))
-  await client.publish(f'{config["topicPub"]}gasm3', str(gasmeter.values["gasm3"]), retain=True)
-  await client.publish(f'{config["topicPub"]}gaskWh', str(gasmeter.values["gaskWh"]), retain=True)
+  await client.publish(f'{config["topicPub"]}gasm3', str(gasmeter.gas_volume), retain=True)
+  await client.publish(f'{config["topicPub"]}gaskWh', str(gasmeter.gas_energy), retain=True)
   pinReset = True
   while True:
     if reedPin.value() == 0 and pinReset:
@@ -151,8 +150,8 @@ async def update(request):
       valueJson[key] = float(request.form[key])
     valueJson['gaskWh'] = gasmeter.calc_power()
     gasmeter.write_values()
-    await client.publish(f'{config["topicPub"]}gasm3', str(valueJson['gasm3']), retain=True)
-    await client.publish(f'{config["topicPub"]}gaskWh', str(valueJson['gaskWh']), retain=True)
+    await client.publish(f'{config["topicPub"]}gasm3', str(gasmeter.gas_volume), retain=True)
+    await client.publish(f'{config["topicPub"]}gaskWh', str(gasmeter.gas_energy), retain=True)
     gc.collect()
   elif "reboot" in request.form:
     machine.reset()
